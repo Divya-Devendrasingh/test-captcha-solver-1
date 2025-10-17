@@ -4,212 +4,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Captcha Solver App</title>
+    <title>Captcha Solver</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, sans-serif;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: flex-start; /* Align to top to prevent weird centering on small screens */
             min-height: 100vh;
             margin: 0;
-            background-color: #eef1f5;
-            color: #333;
-            line-height: 1.6;
+            background-color: #f4f4f4;
+            padding: 20px;
+            box-sizing: border-box;
         }
-        .container {
+
+        #app {
             background-color: #ffffff;
-            padding: 30px 40px;
-            border-radius: 10px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
-            max-width: 450px;
-            width: 90%;
-            border: 1px solid #e0e0e0;
+            max-width: 500px;
+            width: 100%;
         }
+
         h1 {
-            color: #2c3e50;
-            margin-bottom: 25px;
-            font-size: 1.8em;
-            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
         }
-        #captcha-image {
+
+        p {
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .captcha-container {
+            margin: 25px 0;
             border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 25px;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            display: inline-block; /* To make border fit content */
+        }
+
+        #captchaImage {
             max-width: 100%;
             height: auto;
-            background-color: #f9f9f9;
-            padding: 5px;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+            display: block; /* Remove extra space below image */
         }
-        .input-group {
-            margin-bottom: 25px;
+
+        .input-container {
+            margin-top: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
         }
+
         label {
             display: block;
-            margin-bottom: 10px;
-            font-weight: 500;
-            color: #555;
-            font-size: 1.1em;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
         }
-        input[type="text"] {
-            width: calc(100% - 24px); /* Account for padding and border */
-            padding: 12px;
+
+        #captchaInput {
+            width: calc(100% - 40px); /* Adjust for padding */
+            padding: 12px 20px;
+            margin-bottom: 0; /* Removed margin-bottom to align with gap */
             border: 1px solid #ccc;
-            border-radius: 5px;
+            border-radius: 4px;
             font-size: 1.1em;
-            box-sizing: border-box; /* Include padding and border in the element's total width and height */
-            text-align: center;
-            letter-spacing: 1px;
+            box-sizing: border-box; /* Include padding in width */
+            max-width: 300px; /* Limit input width */
         }
-        input[type="text"]:focus {
-            border-color: #007bff;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-        }
-        .buttons-container {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-        button {
-            background-color: #28a745;
+
+        #submitButton {
+            background-color: #007bff;
             color: white;
             padding: 12px 25px;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 1.05em;
-            font-weight: 500;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            font-size: 1.1em;
+            transition: background-color 0.3s ease;
+            width: fit-content; /* Adjust button width to content */
         }
-        button:hover {
-            background-color: #218838;
-            transform: translateY(-2px);
-        }
-        button:active {
-            transform: translateY(0);
-        }
-        #refresh-button {
-            background-color: #007bff;
-        }
-        #refresh-button:hover {
+
+        #submitButton:hover {
             background-color: #0056b3;
         }
-        #feedback {
+
+        #resultMessage {
             margin-top: 25px;
-            font-weight: 600;
-            font-size: 1.1em;
-            min-height: 25px; /* Prevent layout shift */
+            font-weight: bold;
+            font-size: 1.2em;
+            min-height: 24px; /* Maintain space even when empty */
         }
-        #feedback.success {
-            color: #28a745;
+
+        .correct {
+            color: #28a745; /* Green for correct */
         }
-        #feedback.error {
-            color: #dc3545;
+
+        .incorrect {
+            color: #dc3545; /* Red for incorrect */
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Solve the Captcha</h1>
-        <img id="captcha-image" src="https://github.com/Divya-Devendrasingh/test-captcha-solver-1/blob/main/sample-captcha.png?raw=true" alt="Captcha Image">
-        <div class="input-group">
-            <label for="captcha-input">Enter the text exactly as you see it above:</label>
-            <input 
-                type="text" 
-                id="captcha-input" 
-                placeholder="Type your answer here" 
-                autocomplete="off" 
-                autocorrect="off" 
-                autocapitalize="off" 
-                spellcheck="false"
-                maxlength="5"
-            >
+    <div id="app">
+        <h1>Captcha Solver</h1>
+        <p>Solve the captcha below by typing the characters you see.</p>
+
+        <div class="captcha-container">
+            <img id="captchaImage" src="https://github.com/Divya-Devendrasingh/test-captcha-solver-1/blob/main/sample-captcha.png?raw=true" alt="Captcha Image">
         </div>
-        <div class="buttons-container">
-            <button id="submit-button">Verify Captcha</button>
-            <button id="refresh-button">New Captcha</button>
+
+        <div class="input-container">
+            <label for="captchaInput">Enter your solution:</label>
+            <input type="text" id="captchaInput" placeholder="e.g., Q6Z8N" autocomplete="off">
+            <button id="submitButton">Submit</button>
         </div>
-        <div id="feedback"></div>
+
+        <p id="resultMessage"></p>
     </div>
 
     <script>
-        // Get references to DOM elements
-        const captchaImage = document.getElementById('captcha-image');
-        const captchaInput = document.getElementById('captcha-input');
-        const submitButton = document.getElementById('submit-button');
-        const refreshButton = document.getElementById('refresh-button');
-        const feedbackDiv = document.getElementById('feedback');
+        document.addEventListener('DOMContentLoaded', () => {
+            const captchaInput = document.getElementById('captchaInput');
+            const submitButton = document.getElementById('submitButton');
+            const resultMessage = document.getElementById('resultMessage');
 
-        // Define the specific captcha image and its correct answer as per the brief
-        // The text in https://github.com/Divya-Devendrasingh/test-captcha-solver-1/blob/main/sample-captcha.png is "H9D3A"
-        const captchaData = [
-            {
-                imageUrl: "https://github.com/Divya-Devendrasingh/test-captcha-solver-1/blob/main/sample-captcha.png?raw=true",
-                answer: "H9D3A"
-            }
-            // You can extend this array with more captcha objects for varied challenges, e.g.:
-            // { imageUrl: "https://example.com/another-captcha.png?raw=true", answer: "XYZ123" }
-        ];
+            // The hardcoded correct answer for sample-captcha.png: "Q6Z8N"
+            const CORRECT_ANSWER = "Q6Z8N";
 
-        let currentCaptchaIndex = 0; // For this brief, we only have one captcha, so we stick to index 0
+            const checkCaptcha = () => {
+                const userInput = captchaInput.value.trim().toUpperCase(); // Trim whitespace and convert to uppercase for case-insensitive comparison
 
-        /**
-         * Loads the current captcha image and clears previous state.
-         * If `captchaData` had multiple entries, this function would select a random one.
-         */
-        function loadCaptcha() {
-            const captcha = captchaData[currentCaptchaIndex];
-            captchaImage.src = captcha.imageUrl;
-            captchaInput.value = ''; // Clear input field
-            feedbackDiv.textContent = ''; // Clear feedback message
-            feedbackDiv.className = ''; // Remove any success/error classes
-            captchaInput.focus(); // Focus on the input field for convenience
-        }
+                if (userInput === CORRECT_ANSWER) {
+                    resultMessage.textContent = "Correct! Captcha solved.";
+                    resultMessage.className = 'correct';
+                } else {
+                    resultMessage.textContent = "Incorrect. Please try again.";
+                    resultMessage.className = 'incorrect';
+                }
+            };
 
-        /**
-         * Verifies the user's input against the correct captcha answer.
-         */
-        function verifyCaptcha() {
-            const userAnswer = captchaInput.value.trim();
-            const correctSolution = captchaData[currentCaptchaIndex].answer;
+            // Event listener for button click
+            submitButton.addEventListener('click', checkCaptcha);
 
-            // Compare case-insensitively for better user experience
-            if (userAnswer.toUpperCase() === correctSolution.toUpperCase()) {
-                feedbackDiv.textContent = 'Success! Captcha solved correctly.';
-                feedbackDiv.className = 'success';
-                // Optionally, you might want to disable input/button or redirect here
-                // captchaInput.disabled = true;
-                // submitButton.disabled = true;
-            } else {
-                feedbackDiv.textContent = 'Incorrect. Please try again.';
-                feedbackDiv.className = 'error';
-                captchaInput.focus(); // Keep focus on input to allow quick retry
-            }
-        }
+            // Event listener for 'Enter' key press on the input field
+            captchaInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    checkCaptcha();
+                }
+            });
 
-        // --- Event Listeners ---
-
-        // Submit button click
-        submitButton.addEventListener('click', verifyCaptcha);
-
-        // Refresh button click (for this brief, it just reloads the same captcha)
-        refreshButton.addEventListener('click', loadCaptcha);
-
-        // Allow 'Enter' key to submit the captcha from the input field
-        captchaInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault(); // Prevent default form submission if any
-                verifyCaptcha();
-            }
+            // Optional: Focus on the input field when the page loads
+            captchaInput.focus();
         });
-
-        // Load the captcha when the page finishes loading
-        document.addEventListener('DOMContentLoaded', loadCaptcha);
     </script>
 </body>
 </html>
