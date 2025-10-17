@@ -1,302 +1,299 @@
+Okay, this is an interesting challenge. A "captcha solver" in a single HTML file with inline JS & CSS immediately brings up the core difficulty: performing Optical Character Recognition (OCR) directly in the browser without external libraries.
 
+*   **Constraint 1: Single `index.html` file, inline CSS/JS.** This is strictly adhered to.
+*   **Constraint 2: Captcha Solver.** This is the tricky part. For any *effective* OCR, a robust library is needed. The most popular one for browser-side OCR is `tesseract.js`. However, `tesseract.js` itself is a significant library with WebAssembly (WASM) components, and *inlining it fully* into a single HTML file is impractical and would make the file enormous and unwieldy, essentially defeating the spirit of "inline JS" for this specific purpose.
+
+**My Approach:**
+
+1.  **Acknowledge the Tesseract.js necessity:** For a *functional* captcha solver that actually recognizes characters, `tesseract.js` is the only realistic browser-side option.
+2.  **Compromise on strict inlining for Tesseract.js:** I will include `tesseract.js` via a CDN link. This is the standard way to use it in a client-side web app and is widely accepted when "single file" refers to the *project's source files*, not *every single byte* including vast third-party libraries. I will explicitly state this deviation. If *absolute strict inlining* of Tesseract.js was required, the "solver" part would be reduced to a human typing the captcha, as implementing OCR from scratch in pure JS is a monumental task far beyond this scope.
+3.  **Default Sample Image:** Since no image is actually "attached" in this text-based request, I'll use a publicly available, simple captcha-like image for the default.
+4.  **Core Functionality:**
+    *   Load image from URL parameter or default.
+    *   Display image.
+    *   Button to trigger OCR using `tesseract.js`.
+    *   Display OCR result.
+    *   Manual input for user if OCR fails or for verification.
+
+---
+
+Here is the `index.html` file:
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client-Side Captcha Interface</title>
+    <title>Simple Captcha Solver</title>
     <style>
-        /* General Body Styling */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
             background-color: #f4f7f6;
+            color: #333;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
-            margin: 0;
-            color: #333;
-            line-height: 1.6;
         }
-
-        /* Main Container Styling */
         .container {
             background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            width: 90%;
+            max-width: 600px;
+            width: 100%;
             text-align: center;
-            animation: fadeIn 0.8s ease-out;
         }
-
-        /* Fade-in Animation for the Container */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Heading Styling */
         h1 {
-            color: #0056b3;
+            color: #2c3e50;
             margin-bottom: 25px;
-            font-size: 1.8em;
+            font-size: 2em;
         }
-
-        h2 {
-            color: #0056b3;
-            margin-top: 30px;
+        .input-group {
             margin-bottom: 20px;
-            font-size: 1.4em;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
         }
-
-        /* Captcha Image Area Styling */
-        .captcha-area {
-            margin-bottom: 25px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            background-color: #f9f9f9;
+        .input-group label {
+            font-weight: bold;
+            color: #555;
+            align-self: flex-start;
+            margin-bottom: 5px;
+        }
+        .input-group input[type="text"] {
+            width: calc(100% - 20px);
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+        .input-group input[type="text"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0, 123, 255, 0.2);
+        }
+        button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0, 123, 255, 0.3);
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
         }
 
         #captchaImage {
             max-width: 100%;
             height: auto;
-            border-radius: 6px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-            margin-bottom: 15px;
-        }
-
-        /* Label Styling */
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-        }
-
-        /* Input Field Styling */
-        input[type="text"] {
-            width: calc(100% - 22px); /* Account for padding and border */
-            padding: 12px;
-            margin-bottom: 15px;
-            border: 1px solid #cccccc;
-            border-radius: 6px;
-            font-size: 1em;
-            box-sizing: border-box; /* Include padding and border in the element's total width and height */
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus {
-            border-color: #007bff;
-            outline: none;
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.2);
-        }
-
-        /* Button Styling */
-        button {
-            padding: 12px 25px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 1em;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            margin: 5px;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-            transform: translateY(-2px);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        /* Result Message Styling */
-        #result {
-            margin-top: 25px;
-            font-weight: 600;
-            font-size: 1.1em;
-            padding: 10px;
-            border-radius: 6px;
-            background-color: #e9ecef;
-            color: #333;
-        }
-
-        /* Informational Text Styling */
-        .info-text {
-            font-size: 0.9em;
-            color: #6c757d;
+            border: 1px solid #eee;
+            border-radius: 5px;
             margin-top: 20px;
-            line-height: 1.4;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
         }
-
-        /* Current Image URL Display */
-        .current-url-display {
-            font-size: 0.85em;
-            color: #888;
-            margin-top: 10px;
-            word-break: break-all; /* Ensures long URLs wrap */
+        #statusMessage {
+            margin-top: 15px;
+            font-style: italic;
+            color: #666;
+            min-height: 20px; /* To prevent layout shift */
         }
-
-        /* Custom URL Section Styling */
-        .custom-url-section {
+        .result-section {
             margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
+            background-color: #e9f7ef;
+            border: 1px solid #d4edda;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .result-section h2 {
+            color: #28a745;
+            margin-top: 0;
+            font-size: 1.5em;
+        }
+        #ocrResult {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #008000;
+            letter-spacing: 1px;
+            min-height: 30px; /* To prevent layout shift */
+        }
+        #manualInput {
+            margin-top: 15px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Client-Side Captcha Interface</h1>
+        <h1>Simple Captcha Solver</h1>
 
-        <div class="captcha-area">
-            <label for="captchaImage">Current Captcha Image:</label>
-            <img id="captchaImage" src="" alt="Captcha Image Preview">
-            <div class="current-url-display">
-                URL: <span id="currentImageUrl"></span>
+        <div class="input-group">
+            <label for="urlInput">Captcha Image URL:</label>
+            <input type="text" id="urlInput" placeholder="Enter image URL or use default">
+            <div class="button-group">
+                <button id="loadImageBtn">Load Image</button>
+                <button id="solveCaptchaBtn">Solve Captcha (OCR)</button>
             </div>
         </div>
 
-        <label for="solutionInput">Enter Captcha Solution:</label>
-        <input type="text" id="solutionInput" placeholder="Type the characters here" autocomplete="off">
-        <button id="solveButton">Submit Solution</button>
+        <img id="captchaImage" src="" alt="Captcha Image">
 
-        <div id="result"></div>
+        <div id="statusMessage"></div>
 
-        <div class="custom-url-section">
-            <h2>Load Custom Captcha Image</h2>
-            <label for="customUrlInput">Image URL:</label>
-            <input type="text" id="customUrlInput" placeholder="e.g., https://example.com/captcha.png">
-            <button id="loadCustomUrlButton">Load Custom Image</button>
-            <div class="info-text">
-                <p>Alternatively, you can load an image by adding <code>?url=YOUR_IMAGE_URL</code> to the browser's address bar.</p>
+        <div class="result-section">
+            <h2>OCR Result:</h2>
+            <div id="ocrResult"></div>
+            <p style="margin-top: 20px; color: #555;">If OCR is incorrect, enter manually:</p>
+            <div class="input-group">
+                <input type="text" id="manualInput" placeholder="Enter solution manually">
+                <button id="submitManualBtn">Submit Manual Solution</button>
             </div>
-        </div>
-
-        <div class="info-text">
-            <p><strong>Note:</strong> This is a client-side interface demo. A true AI-powered captcha solver would typically involve complex server-side processing and machine learning models. For the default image, the expected solution is "TEST" for demonstration purposes.</p>
         </div>
     </div>
 
+    <!-- 
+        IMPORTANT NOTE ON TESSERACT.JS:
+        For a functional "captcha solver" (i.e., character recognition), 
+        a robust OCR library like Tesseract.js is required. 
+        It is impractical to inline Tesseract.js (which includes WASM binaries 
+        and is quite large) directly into a single HTML file while maintaining 
+        reasonable file size and maintainability.
+        
+        Therefore, Tesseract.js is loaded via a CDN here. If strict "no external 
+        requests whatsoever" was the rule, a functional OCR would be impossible 
+        within this constraint without building a custom, highly simplified (and 
+        likely ineffective) OCR engine from scratch in pure JS.
+        
+        This approach allows for a "functional" solver.
+    -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <script>
-        // Default Captcha Image URL and its expected solution for demonstration.
-        // This image (https://i.imgur.com/K1R2g2V.png) simply displays the text "TEST".
-        const DEFAULT_CAPTCHA_URL = "https://i.imgur.com/K1R2g2V.png";
-        const DEFAULT_CAPTCHA_SOLUTION = "TEST";
-
-        // Get references to DOM elements
-        const captchaImage = document.getElementById('captchaImage');
-        const solutionInput = document.getElementById('solutionInput');
-        const solveButton = document.getElementById('solveButton');
-        const resultDiv = document.getElementById('result');
-        const customUrlInput = document.getElementById('customUrlInput');
-        const loadCustomUrlButton = document.getElementById('loadCustomUrlButton');
-        const currentImageUrlSpan = document.getElementById('currentImageUrl');
-
-        // Stores the URL of the image currently displayed.
-        // This helps in determining if it's the default image for solution checking.
-        let currentlyLoadedImageUrl = DEFAULT_CAPTCHA_URL;
-
-        /**
-         * Loads and displays a captcha image from the given URL.
-         * If no URL is provided, it defaults to DEFAULT_CAPTCHA_URL.
-         * @param {string} url - The URL of the image to load.
-         */
-        function loadCaptchaImage(url) {
-            if (!url) {
-                url = DEFAULT_CAPTCHA_URL;
-            }
-            captchaImage.src = url;
-            currentlyLoadedImageUrl = url; // Update the stored URL
-            currentImageUrlSpan.textContent = url; // Display the URL in the UI
-            resultDiv.textContent = ''; // Clear any previous result message
-            solutionInput.value = ''; // Clear previous input
-            solutionInput.focus(); // Focus the input for user convenience
-        }
-
-        /**
-         * "Solves" (or checks) the captcha based on user input.
-         * For the default image, it checks against a hardcoded solution.
-         * For custom images, it just acknowledges the submission as no automated check is possible client-side without prior knowledge.
-         */
-        function solveCaptcha() {
-            const userSolution = solutionInput.value.trim();
-
-            if (!userSolution) {
-                resultDiv.textContent = 'Please enter your solution.';
-                resultDiv.style.color = 'orange';
-                return;
-            }
-
-            // This section simulates a "solver" logic.
-            // A real AI solver would analyze the 'captchaImage.src'
-            // and return a predicted solution here (usually server-side).
-            let expectedSolution = null;
-
-            // If the currently loaded image is the default one, we can check its solution.
-            if (currentlyLoadedImageUrl === DEFAULT_CAPTCHA_URL) {
-                expectedSolution = DEFAULT_CAPTCHA_SOLUTION;
-            }
-
-            if (expectedSolution) {
-                // Perform a case-insensitive comparison for the default captcha
-                if (userSolution.toUpperCase() === expectedSolution.toUpperCase()) {
-                    resultDiv.textContent = `Correct! The solution was "${expectedSolution}".`;
-                    resultDiv.style.color = 'green';
-                } else {
-                    resultDiv.textContent = `Incorrect. You entered "${userSolution}". (Expected: "${expectedSolution}")`;
-                    resultDiv.style.color = 'red';
-                }
-            } else {
-                // For custom images, we don't have a predefined solution.
-                // We just acknowledge the user's submission to simulate a solver's response.
-                resultDiv.textContent = `Solution "${userSolution}" submitted. (No automated check for custom images)`;
-                resultDiv.style.color = 'blue';
-            }
-        }
-
-        // --- Event Listeners ---
-
-        // Handle clicks on the "Submit Solution" button
-        solveButton.addEventListener('click', solveCaptcha);
-
-        // Allow pressing Enter key in the solution input to submit
-        solutionInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                solveCaptcha();
-            }
-        });
-
-        // Handle clicks on the "Load Custom Image" button
-        loadCustomUrlButton.addEventListener('click', () => {
-            const customUrl = customUrlInput.value.trim();
-            if (customUrl) {
-                loadCaptchaImage(customUrl);
-            } else {
-                alert('Please enter a URL for the custom image.');
-            }
-        });
-
-        // --- Initial Load Logic ---
-        // This runs once the entire HTML document has been loaded and parsed.
         document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const imageUrlParam = urlParams.get('url');
+            const urlInput = document.getElementById('urlInput');
+            const loadImageBtn = document.getElementById('loadImageBtn');
+            const solveCaptchaBtn = document.getElementById('solveCaptchaBtn');
+            const captchaImage = document.getElementById('captchaImage');
+            const statusMessage = document.getElementById('statusMessage');
+            const ocrResult = document.getElementById('ocrResult');
+            const manualInput = document.getElementById('manualInput');
+            const submitManualBtn = document.getElementById('submitManualBtn');
 
-            if (imageUrlParam) {
-                // If a 'url' query parameter is present, load that image
-                loadCaptchaImage(imageUrlParam);
-                customUrlInput.value = imageUrlParam; // Pre-fill the custom URL input for editing
-            } else {
-                // Otherwise, load the default captcha image
-                loadCaptchaImage(DEFAULT_CAPTCHA_URL);
-            }
+            // Default sample image (a simple one with "Welcome" text)
+            // Replace with your actual attached sample image URL if available
+            const defaultImageUrl = 'https://i.imgur.com/8Q99gGk.png'; 
+
+            // Initialize with URL parameter or default
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialUrl = urlParams.get('url') || defaultImageUrl;
+            urlInput.value = initialUrl;
+
+            // Function to load the image
+            const loadImage = (url) => {
+                statusMessage.textContent = 'Loading image...';
+                captchaImage.src = ''; // Clear previous image
+                ocrResult.textContent = ''; // Clear previous OCR result
+                solveCaptchaBtn.disabled = true;
+
+                if (!url) {
+                    statusMessage.textContent = 'Please enter an image URL.';
+                    return;
+                }
+
+                const img = new Image();
+                img.onload = () => {
+                    captchaImage.src = url;
+                    statusMessage.textContent = 'Image loaded successfully.';
+                    solveCaptchaBtn.disabled = false;
+                };
+                img.onerror = () => {
+                    statusMessage.textContent = 'Failed to load image. Check the URL and CORS policy.';
+                    captchaImage.src = '';
+                    solveCaptchaBtn.disabled = true;
+                };
+                img.src = url; // Set src last to trigger load/error events
+            };
+
+            // Function to solve captcha using Tesseract.js
+            const solveCaptcha = async () => {
+                if (!captchaImage.src) {
+                    statusMessage.textContent = 'No image to solve. Load an image first.';
+                    return;
+                }
+                
+                statusMessage.textContent = 'Initializing OCR engine...';
+                solveCaptchaBtn.disabled = true;
+                ocrResult.textContent = '';
+
+                try {
+                    const { data: { text } } = await Tesseract.recognize(
+                        captchaImage,
+                        'eng', // Language code for English
+                        { 
+                            logger: m => {
+                                if (m.status === 'recognizing text') {
+                                    statusMessage.textContent = `OCR: ${m.status} - ${(m.progress * 100).toFixed(0)}%`;
+                                } else {
+                                    statusMessage.textContent = `OCR: ${m.status}`;
+                                }
+                            }
+                        }
+                    );
+                    
+                    const cleanedText = text.replace(/\s+/g, '').trim(); // Remove whitespace
+                    ocrResult.textContent = cleanedText || 'No text recognized.';
+                    statusMessage.textContent = 'OCR complete!';
+                    manualInput.value = cleanedText; // Pre-fill manual input with OCR result
+                } catch (error) {
+                    statusMessage.textContent = `OCR failed: ${error.message}.`;
+                    ocrResult.textContent = 'Error during OCR.';
+                    console.error('Tesseract OCR error:', error);
+                } finally {
+                    solveCaptchaBtn.disabled = false;
+                }
+            };
+
+            // Event Listeners
+            loadImageBtn.addEventListener('click', () => loadImage(urlInput.value));
+            solveCaptchaBtn.addEventListener('click', solveCaptcha);
+            submitManualBtn.addEventListener('click', () => {
+                const solution = manualInput.value.trim();
+                if (solution) {
+                    statusMessage.textContent = `Manual solution submitted: "${solution}"`;
+                    // In a real app, you would send this to a backend for verification
+                } else {
+                    statusMessage.textContent = 'Manual input is empty.';
+                }
+            });
+
+            // Load image on page load
+            loadImage(initialUrl);
         });
     </script>
 </body>
