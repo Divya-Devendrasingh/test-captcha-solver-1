@@ -1,7 +1,7 @@
 # test-captcha-solver-1
 
 ## Summary
-This repository implements a single-page application based on the provided brief: This is a test task for GitHub repo creation
+This repository implements a single-page application based on the provided brief: Create a captcha solver that handles ?url=https://.../image.png. Default to attached sample.
 
 ## Setup
 1. Clone the repository.
@@ -11,6 +11,8 @@ This repository implements a single-page application based on the provided brief
 Visit the GitHub Pages URL to interact with the app. The app fulfills the following requirements:
 - Repo has MIT license
 - README.md is professional
+- Page displays captcha URL passed at ?url=...
+- Page displays solved captcha text within 15 seconds
 
 ## Code Explanation
 The application is implemented in `index.html` with inline CSS and JavaScript to meet the brief's requirements. The code is structured to be minimal yet functional, leveraging external libraries (e.g., Bootstrap, marked) as needed.
