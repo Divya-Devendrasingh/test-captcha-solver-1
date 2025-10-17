@@ -3,6 +3,8 @@
 ## Summary
 This repository implements a single-page application based on the provided brief: Create a captcha solver that handles ?url=https://.../image.png. Default to attached sample (sample-captcha.png).
 
+https://divya-devendrasingh.github.io/test-captcha-solver-1/
+
 ## Setup
 1. Clone the repository.
 2. Open `index.html` in a browser or visit the GitHub Pages URL.
