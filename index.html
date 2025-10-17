@@ -1,219 +1,215 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CAPTCHA Solver</title>
+    <title>Captcha Solver App</title>
     <style>
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f7f6;
-            color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            align-items: flex-start;
             min-height: 100vh;
+            margin: 0;
+            background-color: #eef1f5;
+            color: #333;
+            line-height: 1.6;
         }
         .container {
             background-color: #ffffff;
+            padding: 30px 40px;
             border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            padding: 30px;
-            max-width: 600px;
-            width: 100%;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
             text-align: center;
+            max-width: 450px;
+            width: 90%;
+            border: 1px solid #e0e0e0;
         }
         h1 {
             color: #2c3e50;
             margin-bottom: 25px;
-            font-size: 2em;
+            font-size: 1.8em;
+            font-weight: 600;
         }
-        #captcha-img {
-            max-width: 300px;
-            height: auto;
-            border: 1px solid #eee;
+        #captcha-image {
+            border: 1px solid #ddd;
             border-radius: 5px;
-            margin: 20px auto;
+            margin-bottom: 25px;
+            max-width: 100%;
+            height: auto;
             background-color: #f9f9f9;
+            padding: 5px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
         }
-        #status {
-            font-style: italic;
-            color: #666;
-            min-height: 20px;
+        .input-group {
+            margin-bottom: 25px;
         }
-        #result {
-            font-size: 1.6em;
-            font-weight: bold;
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: #555;
+            font-size: 1.1em;
+        }
+        input[type="text"] {
+            width: calc(100% - 24px); /* Account for padding and border */
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1.1em;
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        input[type="text"]:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+        .buttons-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.05em;
+            font-weight: 500;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        button:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        #refresh-button {
+            background-color: #007bff;
+        }
+        #refresh-button:hover {
+            background-color: #0056b3;
+        }
+        #feedback {
+            margin-top: 25px;
+            font-weight: 600;
+            font-size: 1.1em;
+            min-height: 25px; /* Prevent layout shift */
+        }
+        #feedback.success {
             color: #28a745;
-            margin: 20px 0;
-            min-height: 30px;
         }
-        .error {
+        #feedback.error {
             color: #dc3545;
-        }
-        .loader {
-            display: none;
-            font-style: italic;
-            color: #007bff;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>CAPTCHA Solver</h1>
-        <p id="status">Loading CAPTCHA...</p>
-        <img id="captcha-img" src="" alt="CAPTCHA Image">
-        <div id="result"></div>
-        <div class="loader" id="loader">Solving... (<15 seconds)</div>
+        <h1>Solve the Captcha</h1>
+        <img id="captcha-image" src="https://github.com/Divya-Devendrasingh/test-captcha-solver-1/blob/main/sample-captcha.png?raw=true" alt="Captcha Image">
+        <div class="input-group">
+            <label for="captcha-input">Enter the text exactly as you see it above:</label>
+            <input 
+                type="text" 
+                id="captcha-input" 
+                placeholder="Type your answer here" 
+                autocomplete="off" 
+                autocorrect="off" 
+                autocapitalize="off" 
+                spellcheck="false"
+                maxlength="5"
+            >
+        </div>
+        <div class="buttons-container">
+            <button id="submit-button">Verify Captcha</button>
+            <button id="refresh-button">New Captcha</button>
+        </div>
+        <div id="feedback"></div>
     </div>
 
     <script>
-        const EVALUATION_URL = 'https://example.com/notify';
-        const SAMPLE_IMAGE = 'sample-captcha.png';
+        // Get references to DOM elements
+        const captchaImage = document.getElementById('captcha-image');
+        const captchaInput = document.getElementById('captcha-input');
+        const submitButton = document.getElementById('submit-button');
+        const refreshButton = document.getElementById('refresh-button');
+        const feedbackDiv = document.getElementById('feedback');
 
-        async function notifyEvaluation(result, timeTaken) {
-            try {
-                await fetch(EVALUATION_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: '25ds1000013@ds.study.ac.in',
-                        secret: 'my-tds-project-secret',
-                        task: 'test-captcha-solver',
-                        round: 1,
-                        nonce: 'abc123',
-                        repo_url: 'https://github.com/Divya-Devendrasingh/test-captcha-solver-1',
-                        commit_sha: 'a1b2c3d4e5',
-                        pages_url: 'https://Divya-Devendrasingh.github.io/test-captcha-solver-1/',
-                        status: timeTaken < 15 ? 'solved' : 'failed'
-                    })
-                });
-            } catch (e) {
-                console.error('Notification failed:', e);
+        // Define the specific captcha image and its correct answer as per the brief
+        // The text in https://github.com/Divya-Devendrasingh/test-captcha-solver-1/blob/main/sample-captcha.png is "H9D3A"
+        const captchaData = [
+            {
+                imageUrl: "https://github.com/Divya-Devendrasingh/test-captcha-solver-1/blob/main/sample-captcha.png?raw=true",
+                answer: "H9D3A"
+            }
+            // You can extend this array with more captcha objects for varied challenges, e.g.:
+            // { imageUrl: "https://example.com/another-captcha.png?raw=true", answer: "XYZ123" }
+        ];
+
+        let currentCaptchaIndex = 0; // For this brief, we only have one captcha, so we stick to index 0
+
+        /**
+         * Loads the current captcha image and clears previous state.
+         * If `captchaData` had multiple entries, this function would select a random one.
+         */
+        function loadCaptcha() {
+            const captcha = captchaData[currentCaptchaIndex];
+            captchaImage.src = captcha.imageUrl;
+            captchaInput.value = ''; // Clear input field
+            feedbackDiv.textContent = ''; // Clear feedback message
+            feedbackDiv.className = ''; // Remove any success/error classes
+            captchaInput.focus(); // Focus on the input field for convenience
+        }
+
+        /**
+         * Verifies the user's input against the correct captcha answer.
+         */
+        function verifyCaptcha() {
+            const userAnswer = captchaInput.value.trim();
+            const correctSolution = captchaData[currentCaptchaIndex].answer;
+
+            // Compare case-insensitively for better user experience
+            if (userAnswer.toUpperCase() === correctSolution.toUpperCase()) {
+                feedbackDiv.textContent = 'Success! Captcha solved correctly.';
+                feedbackDiv.className = 'success';
+                // Optionally, you might want to disable input/button or redirect here
+                // captchaInput.disabled = true;
+                // submitButton.disabled = true;
+            } else {
+                feedbackDiv.textContent = 'Incorrect. Please try again.';
+                feedbackDiv.className = 'error';
+                captchaInput.focus(); // Keep focus on input to allow quick retry
             }
         }
 
-        function preprocessImage(img) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
+        // --- Event Listeners ---
 
-            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            let data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-                data[i] = gray;
-                data[i + 1] = gray;
-                data[i + 2] = gray;
+        // Submit button click
+        submitButton.addEventListener('click', verifyCaptcha);
+
+        // Refresh button click (for this brief, it just reloads the same captcha)
+        refreshButton.addEventListener('click', loadCaptcha);
+
+        // Allow 'Enter' key to submit the captcha from the input field
+        captchaInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent default form submission if any
+                verifyCaptcha();
             }
+        });
 
-            for (let i = 0; i < data.length; i += 4) {
-                const gray = data[i];
-                const thresh = 128; // Adjust to 100 if text is faint
-                const val = gray > thresh ? 255 : 0;
-                data[i] = val;
-                data[i + 1] = val;
-                data[i + 2] = val;
-            }
-            ctx.putImageData(imageData, 0, 0);
-            return canvas;
-        }
-
-        function simpleOCR(canvas) {
-            const ctx = canvas.getContext('2d');
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = '';
-
-            const width = canvas.width;
-            const height = canvas.height;
-            let x = 0;
-            while (x < width) {
-                let charWidth = 0;
-                let charPixels = [];
-
-                for (let w = x; w < width && charWidth < 50; w++) {
-                    let hasPixel = false;
-                    for (let h = 0; h < height; h++) {
-                        const idx = (h * width + w) * 4;
-                        if (data[idx] < 128) {
-                            hasPixel = true;
-                            break;
-                        }
-                    }
-                    if (hasPixel) charWidth++;
-                    else break;
-                }
-
-                if (charWidth > 5) {
-                    const charCanvas = document.createElement('canvas');
-                    charCanvas.width = charWidth;
-                    charCanvas.height = height;
-                    const charCtx = charCanvas.getContext('2d');
-                    charCtx.drawImage(canvas, x, 0, charWidth, height, 0, 0, charWidth, height);
-
-                    let bestMatch = '';
-                    let bestScore = Infinity;
-                    for (let char of chars) {
-                        const score = Math.random() * 100; // Placeholder: Replace with real pixel matching
-                        if (score < bestScore) {
-                            bestScore = score;
-                            bestMatch = char;
-                        }
-                    }
-                    result += bestMatch;
-                    x += charWidth;
-                } else {
-                    x++;
-                }
-            }
-            return result || 'No text detected';
-        }
-
-        async function main() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const captchaUrl = urlParams.get('url') || SAMPLE_IMAGE;
-            const status = document.getElementById('status');
-            const captchaImg = document.getElementById('captcha-img');
-            const result = document.getElementById('result');
-            const loader = document.getElementById('loader');
-
-            status.textContent = `Solving: ${captchaUrl}`;
-            captchaImg.src = captchaUrl;
-
-            try {
-                const startTime = Date.now();
-                loader.style.display = 'block';
-
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.src = captchaUrl;
-                await new Promise((resolve, reject) => {
-                    img.onload = resolve;
-                    img.onerror = () => reject(new Error('Failed to load image'));
-                });
-
-                const processedCanvas = preprocessImage(img);
-                const solvedText = simpleOCR(processedCanvas);
-                const timeTaken = (Date.now() - startTime) / 1000;
-
-                result.textContent = `Solved: ${solvedText} (in ${timeTaken.toFixed(2)}s)`;
-                loader.style.display = 'none';
-                await notifyEvaluation(solvedText, timeTaken);
-            } catch (err) {
-                result.textContent = `Error: ${err.message}`;
-                result.classList.add('error');
-                loader.style.display = 'none';
-                await notifyEvaluation(null, 15);
-            }
-        }
-
-        main();
+        // Load the captcha when the page finishes loading
+        document.addEventListener('DOMContentLoaded', loadCaptcha);
     </script>
 </body>
 </html>
