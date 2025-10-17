@@ -19,3 +19,5 @@ The application is implemented in `index.html` with inline CSS and JavaScript to
 
 ## License
 MIT License
+
+<img width="2384" height="1306" alt="image" src="https://github.com/user-attachments/assets/13a847c1-fd30-4a53-a19e-11dd60eb5ab2" />
